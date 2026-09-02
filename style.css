@@ -1,0 +1,385 @@
+:root {
+  --bg: #f4f6f8;
+  --panel: #ffffff;
+  --text: #17202a;
+  --muted: #68737d;
+  --border: #dde3e8;
+  --ok: #16803c;
+  --warn: #a66b00;
+  --alarm: #b42318;
+  --accent: #2457a6;
+  --shadow: 0 4px 14px rgba(0, 0, 0, .04);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 280px;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding:
+    max(20px, env(safe-area-inset-top))
+    max(28px, env(safe-area-inset-right))
+    20px
+    max(28px, env(safe-area-inset-left));
+  background: #111820;
+  color: #fff;
+}
+
+.topbar-title {
+  min-width: 0;
+}
+
+.topbar h1 {
+  margin: 0 0 6px;
+  font-size: clamp(1.45rem, 2.2vw, 2.25rem);
+  line-height: 1.1;
+}
+
+.topbar p {
+  margin: 0;
+  color: #c8d0d8;
+  font-size: clamp(.82rem, 1vw, 1.05rem);
+}
+
+.badge {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-size: clamp(.72rem, .85vw, .9rem);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge.offline {
+  background: #4b5563;
+}
+
+.badge.online {
+  background: var(--ok);
+}
+
+.container {
+  width: min(100%, 1800px);
+  margin: 0 auto;
+  padding: clamp(12px, 1.8vw, 30px);
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: clamp(10px, 1vw, 18px);
+}
+
+.card {
+  min-width: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: clamp(10px, 1vw, 16px);
+  padding: clamp(14px, 1.4vw, 24px);
+  box-shadow: var(--shadow);
+}
+
+.label {
+  display: block;
+  color: var(--muted);
+  font-size: clamp(.78rem, .85vw, 1rem);
+  margin-bottom: 10px;
+}
+
+.big {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: clamp(1.35rem, 2vw, 2.35rem);
+  line-height: 1.15;
+}
+
+small {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: clamp(.72rem, .8vw, .9rem);
+}
+
+.status-panel {
+  margin-top: clamp(10px, 1vw, 18px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.condition {
+  display: inline-block;
+  padding: 9px 14px;
+  border-radius: 9px;
+  font-size: clamp(1rem, 1.2vw, 1.35rem);
+}
+
+.condition.normal {
+  background: #e7f6ec;
+  color: var(--ok);
+}
+
+.condition.warning {
+  background: #fff3d6;
+  color: var(--warn);
+}
+
+.condition.alarm {
+  background: #fde7e5;
+  color: var(--alarm);
+}
+
+.mini-info {
+  display: flex;
+  justify-content: flex-end;
+  gap: clamp(12px, 2vw, 30px);
+  color: var(--muted);
+  flex-wrap: wrap;
+  font-size: clamp(.8rem, 1vw, 1.05rem);
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(10px, 1vw, 18px);
+  margin: clamp(10px, 1vw, 18px) 0;
+}
+
+.chart-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 10px;
+}
+
+.chart-title h2,
+.records-card h2 {
+  margin: 0 0 4px;
+  font-size: clamp(1.05rem, 1.25vw, 1.45rem);
+}
+
+.chart-title p {
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(.78rem, .85vw, .95rem);
+}
+
+.chart-title > strong {
+  white-space: nowrap;
+  font-size: clamp(.95rem, 1.15vw, 1.25rem);
+}
+
+canvas {
+  width: 100%;
+  height: clamp(230px, 24vw, 360px);
+  display: block;
+  background: #fbfcfd;
+  border-radius: 9px;
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  width: 100%;
+  min-width: 850px;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: clamp(9px, .8vw, 13px) 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: clamp(.8rem, .85vw, .98rem);
+  white-space: nowrap;
+}
+
+th {
+  color: var(--muted);
+  font-size: clamp(.74rem, .78vw, .9rem);
+}
+
+footer {
+  text-align: center;
+  color: var(--muted);
+  padding: 18px 20px max(28px, env(safe-area-inset-bottom));
+  font-size: .85rem;
+}
+
+/* Notebook / monitor médio */
+@media (max-width: 1200px) {
+  .status-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Tablet */
+@media (max-width: 850px) {
+  .topbar {
+    align-items: flex-start;
+  }
+
+  .status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .status-panel {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .mini-info {
+    justify-content: flex-start;
+  }
+
+  canvas {
+    height: 280px;
+  }
+}
+
+/* Celular */
+@media (max-width: 600px) {
+  .topbar {
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  .badge {
+    align-self: flex-start;
+  }
+
+  .container {
+    padding: 10px;
+  }
+
+  .status-grid {
+    gap: 8px;
+  }
+
+  .card {
+    padding: 13px;
+  }
+
+  .big {
+    font-size: clamp(1.22rem, 6vw, 1.65rem);
+  }
+
+  .status-panel {
+    gap: 12px;
+  }
+
+  .mini-info {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .chart-title {
+    align-items: center;
+  }
+
+  canvas {
+    height: 230px;
+  }
+}
+
+/* Celular estreito */
+@media (max-width: 390px) {
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-title {
+    flex-direction: column;
+    gap: 6px;
+  }
+}
+
+/* TV / monitor grande */
+@media (min-width: 1600px) {
+  .container {
+    width: min(96vw, 2100px);
+  }
+
+  .topbar {
+    padding-left: max(36px, 2vw);
+    padding-right: max(36px, 2vw);
+  }
+
+  .status-grid {
+    gap: 20px;
+  }
+
+  .card {
+    padding: 24px;
+  }
+
+  canvas {
+    height: clamp(330px, 22vw, 430px);
+  }
+
+  table {
+    min-width: 100%;
+  }
+}
+
+/* TV Full HD / 4K vista à distância */
+@media (min-width: 1900px) {
+  .topbar h1 {
+    font-size: 2.6rem;
+  }
+
+  .topbar p,
+  .mini-info {
+    font-size: 1.15rem;
+  }
+
+  .label {
+    font-size: 1.08rem;
+  }
+
+  .big {
+    font-size: 2.6rem;
+  }
+
+  .condition {
+    font-size: 1.5rem;
+    padding: 11px 17px;
+  }
+
+  .chart-title h2,
+  .records-card h2 {
+    font-size: 1.55rem;
+  }
+
+  th,
+  td {
+    font-size: 1.05rem;
+  }
+}

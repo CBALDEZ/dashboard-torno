@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#111820">
+  <title>Monitoramento do Torno</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-title">
+      <h1>Monitoramento do Torno</h1>
+      <p id="lastUpdate">Aguardando dados...</p>
+    </div>
+    <div id="cloudBadge" class="badge offline">CONECTANDO...</div>
+  </header>
+
+  <main class="container">
+    <section class="status-grid">
+      <article class="card status-card">
+        <span class="label">Máquina</span>
+        <strong id="machineStatus" class="big">PARADA</strong>
+      </article>
+
+      <article class="card">
+        <span class="label">Horímetro</span>
+        <strong id="horimetro" class="big">0,00 h</strong>
+      </article>
+
+      <article class="card">
+        <span class="label">Vibração RMS</span>
+        <strong id="rms" class="big">0,000 g</strong>
+      </article>
+
+      <article class="card">
+        <span class="label">Pico</span>
+        <strong id="pico" class="big">0,000 g</strong>
+      </article>
+
+      <article class="card">
+        <span class="label">Fator de crista</span>
+        <strong id="crest" class="big">0,00</strong>
+      </article>
+
+      <article class="card">
+        <span class="label">Temperatura</span>
+        <strong id="temperatura" class="big">-- °C</strong>
+        <small>Simulada até instalar o DS18B20</small>
+      </article>
+    </section>
+
+    <section class="card status-panel">
+      <div>
+        <span class="label">Condição geral</span>
+        <strong id="overallStatus" class="condition normal">NORMAL</strong>
+      </div>
+      <div class="mini-info">
+        <span>Equipamento: <b>TORNO_01</b></span>
+        <span>Fonte: ESP32 + MPU6050</span>
+      </div>
+    </section>
+
+    <section class="charts-grid">
+      <article class="card chart-card">
+        <div class="chart-title">
+          <div>
+            <h2>Vibração RMS</h2>
+            <p>Histórico recente</p>
+          </div>
+          <strong id="rmsNow">0,000 g</strong>
+        </div>
+        <canvas id="vibrationChart" width="900" height="320"></canvas>
+      </article>
+
+      <article class="card chart-card">
+        <div class="chart-title">
+          <div>
+            <h2>Temperatura</h2>
+            <p>Histórico recente</p>
+          </div>
+          <strong id="tempNow">-- °C</strong>
+        </div>
+        <canvas id="temperatureChart" width="900" height="320"></canvas>
+      </article>
+    </section>
+
+    <section class="card records-card">
+      <h2>Últimos registros</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Horário</th>
+              <th>Máquina</th>
+              <th>Horímetro</th>
+              <th>RMS</th>
+              <th>Pico</th>
+              <th>Crest</th>
+              <th>Temp.</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>Protótipo de monitoramento — ESP32 / manutenção preditiva</footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
