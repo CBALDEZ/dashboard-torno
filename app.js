@@ -1,178 +1,27 @@
-// DASHBOARD DO TORNO - histórico real do Supabase
-const DEMO_MODE = false;
-
-// Recoloque aqui os mesmos dados que você já usou:
-const SUPABASE_URL = "https://vcnjemexbhxagtpjlzmp.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_up662sIeTAobe0N5u4UcaA_1ES_2wUi";
-
-const vibHistory = [];
-const tempHistory = [];
-const maxPoints = 50;
-
-function fmt(n, digits = 2) {
-  return Number(n).toLocaleString("pt-BR", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits
-  });
-}
-
-function conditionFromData(d) {
-  if (d.rms >= 0.40 || d.temperatura >= 70) return "ALARME";
-  if (d.rms >= 0.25 || d.temperatura >= 60) return "ATENÇÃO";
-  return "NORMAL";
-}
-
-function renderCurrentData(d) {
-  document.getElementById("machineStatus").textContent = d.running ? "LIGADA" : "PARADA";
-  document.getElementById("horimetro").textContent = fmt(d.horimetro, 2) + " h";
-  document.getElementById("rms").textContent = fmt(d.rms, 3) + " g";
-  document.getElementById("pico").textContent = fmt(d.pico, 3) + " g";
-  document.getElementById("crest").textContent = fmt(d.crest, 2);
-  document.getElementById("temperatura").textContent =
-    d.temperatura == null ? "-- °C" : fmt(d.temperatura, 1) + " °C";
-  document.getElementById("rmsNow").textContent = fmt(d.rms, 3) + " g";
-  document.getElementById("tempNow").textContent =
-    d.temperatura == null ? "-- °C" : fmt(d.temperatura, 1) + " °C";
-
-  const status = conditionFromData(d);
-  const cond = document.getElementById("overallStatus");
-  cond.textContent = status;
-  cond.className = "condition " +
-    (status === "ALARME" ? "alarm" : status === "ATENÇÃO" ? "warning" : "normal");
-
-  document.getElementById("lastUpdate").textContent =
-    "Última atualização: " + new Date(d.created_at).toLocaleString("pt-BR");
-}
-
-function renderHistory(records) {
-  vibHistory.length = 0;
-  tempHistory.length = 0;
-
-  records.forEach(d => {
-    vibHistory.push(Number(d.rms) || 0);
-    tempHistory.push(d.temperatura == null ? 0 : Number(d.temperatura));
-  });
-
-  drawChart("vibrationChart", vibHistory, "g");
-  drawChart("temperatureChart", tempHistory, "°C");
-
-  const tbody = document.getElementById("historyBody");
-  const latestFirst = [...records].reverse().slice(0, 10);
-
-  tbody.innerHTML = latestFirst.map(x => {
-    const status = conditionFromData(x);
-    return `
-      <tr>
-        <td>${new Date(x.created_at).toLocaleTimeString("pt-BR")}</td>
-        <td>${x.running ? "LIGADA" : "PARADA"}</td>
-        <td>${fmt(x.horimetro, 2)} h</td>
-        <td>${fmt(x.rms, 3)} g</td>
-        <td>${fmt(x.pico, 3)} g</td>
-        <td>${fmt(x.crest, 2)}</td>
-        <td>${x.temperatura == null ? "--" : fmt(x.temperatura, 1) + " °C"}</td>
-        <td>${status}</td>
-      </tr>`;
-  }).join("");
-}
-
-function drawChart(canvasId, values, unit) {
-  const canvas = document.getElementById(canvasId);
-  const ctx = canvas.getContext("2d");
-  const rect = canvas.getBoundingClientRect();
-  const ratio = window.devicePixelRatio || 1;
-  const w = Math.max(400, Math.floor(rect.width * ratio));
-  const h = Math.max(220, Math.floor(270 * ratio));
-
-  if (canvas.width !== w || canvas.height !== h) {
-    canvas.width = w;
-    canvas.height = h;
-  }
-
-  ctx.clearRect(0, 0, w, h);
-  if (!values.length) return;
-
-  const padL = 58 * ratio, padR = 18 * ratio, padT = 20 * ratio, padB = 38 * ratio;
-  const plotW = w - padL - padR, plotH = h - padT - padB;
-  const minRaw = Math.min(...values), maxRaw = Math.max(...values);
-  let range = maxRaw - minRaw;
-  if (range < 0.01) range = unit === "g" ? 0.01 : 2.0;
-
-  const minY = Math.max(0, minRaw - range * 0.20);
-  const maxY = maxRaw + range * 0.20;
-
-  ctx.strokeStyle = "#d9e0e6";
-  ctx.lineWidth = 1 * ratio;
-  ctx.fillStyle = "#68737d";
-  ctx.font = `${11 * ratio}px Arial`;
-
-  for (let i = 0; i <= 4; i++) {
-    const y = padT + (plotH * i / 4);
-    ctx.beginPath();
-    ctx.moveTo(padL, y);
-    ctx.lineTo(w - padR, y);
-    ctx.stroke();
-
-    const val = maxY - ((maxY - minY) * i / 4);
-    ctx.fillText(val.toFixed(unit === "g" ? 3 : 1), 5 * ratio, y + 4 * ratio);
-  }
-
-  if (values.length === 1) return;
-
-  ctx.strokeStyle = "#2457a6";
-  ctx.lineWidth = 2.2 * ratio;
-  ctx.beginPath();
-
-  values.forEach((v, i) => {
-    const x = padL + (i / (values.length - 1)) * plotW;
-    const y = padT + (1 - (v - minY) / (maxY - minY)) * plotH;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-
-  ctx.stroke();
-}
-
-async function updateDashboard() {
-  try {
-    const url =
-      `${SUPABASE_URL}/rest/v1/machine_data?select=*&order=created_at.desc&limit=${maxPoints}`;
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json"
-      }
-    });
-
-    if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
-
-    let data = await response.json();
-    if (!data.length) return;
-
-    data = data.reverse(); // ordem cronológica para o gráfico
-    const latest = data[data.length - 1];
-
-    renderCurrentData(latest);
-    renderHistory(data);
-
-    document.getElementById("cloudBadge").textContent = "NUVEM CONECTADA";
-    document.getElementById("cloudBadge").className = "badge online";
-  } catch (erro) {
-    console.error("Erro ao acessar Supabase:", erro);
-    document.getElementById("cloudBadge").textContent = "ERRO NA NUVEM";
-    document.getElementById("cloudBadge").className = "badge offline";
-  }
-}
-
-document.getElementById("cloudBadge").textContent = "CONECTANDO...";
-document.getElementById("cloudBadge").className = "badge offline";
-
-updateDashboard();
-setInterval(updateDashboard, 5000);
-
-window.addEventListener("resize", () => {
-  drawChart("vibrationChart", vibHistory, "g");
-  drawChart("temperatureChart", tempHistory, "°C");
-});
+const DEMO_MODE=true;
+const SUPABASE_URL="COLE_AQUI_SUA_PROJECT_URL";
+const SUPABASE_PUBLISHABLE_KEY="COLE_AQUI_SUA_PUBLISHABLE_KEY";
+const LIMITS={rmsWarn:.25,rmsAlarm:.40,tempWarn:60,tempAlarm:70};
+const MACHINES=[
+{id:"TORNO_01",name:"Torno 01",type:"Torno mecânico",icon:"⚙️"},{id:"TORNO_02",name:"Torno 02",type:"Torno mecânico",icon:"⚙️"},{id:"TORNO_03",name:"Torno 03",type:"Torno mecânico",icon:"⚙️"},{id:"TORNO_04",name:"Torno 04",type:"Torno mecânico",icon:"⚙️"},{id:"FRESADORA_01",name:"Fresadora 01",type:"Fresadora",icon:"🛠️"},{id:"FRESADORA_02",name:"Fresadora 02",type:"Fresadora",icon:"🛠️"},{id:"FURADEIRA_01",name:"Furadeira 01",type:"Furadeira de coluna",icon:"🔩"},{id:"FURADEIRA_02",name:"Furadeira 02",type:"Furadeira de coluna",icon:"🔩"},{id:"RETIFICA_CIL",name:"Retífica cilíndrica",type:"Retífica",icon:"🧰"},{id:"TORNO_CNC",name:"Torno CNC",type:"CNC",icon:"🖥️"},{id:"CENTRO_CNC",name:"Centro de usinagem CNC",type:"Centro de usinagem",icon:"🏭"}];
+let allRecords=[],latest={},selected=null;
+const fmt=(n,d=2)=>Number.isFinite(Number(n))?Number(n).toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d}):"--";
+const meta=id=>MACHINES.find(m=>m.id===id)||{id,name:id,type:"Máquina",icon:"⚙️"};
+function state(r){if(!r)return"stopped";const rms=+r.rms||0,t=+r.temperatura||0;if(rms>=LIMITS.rmsAlarm||t>=LIMITS.tempAlarm)return"alarm";if(rms>=LIMITS.rmsWarn||t>=LIMITS.tempWarn)return"warning";return r.running?"running":"stopped"}
+const label=s=>({running:"Em operação",stopped:"Parada",warning:"Atenção",alarm:"Alarme"}[s]||"Sem dados");
+function demo(){const out=[],now=Date.now();MACHINES.forEach((m,k)=>{const base=100+k*43.7;for(let i=59;i>=0;i--){let running=k%4!==2;if(k===5&&i<14)running=false;if(k===8&&i<22)running=false;let rms=running?.035+k*.003+Math.sin((i+k)/5)*.008+Math.random()*.006:.004+Math.random()*.003;let temp=running?31+k*.55+Math.sin(i/9)*1.2+Math.random()*.5:29+Math.random()*.7;if(m.id==="TORNO_04"&&i<5)rms=.46+Math.random()*.04;if(m.id==="FURADEIRA_02"&&i<7)temp=66+Math.random()*2.5;if(m.id==="TORNO_03"&&i<10)running=false;const peak=Math.max(rms*(2+Math.random()*1.8),rms);out.push({id:`${m.id}_${i}`,created_at:new Date(now-i*60000).toISOString(),machine:m.id,running,horimetro:base+(59-i)*(running?1:0)/60,rms,pico:peak,crest:rms?peak/rms:0,temperatura:temp})}});return out}
+async function fetchCloud(){const u=`${SUPABASE_URL}/rest/v1/machine_data?select=*&order=created_at.desc&limit=1200`;const r=await fetch(u,{headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`}});if(!r.ok)throw Error(`HTTP ${r.status}`);return r.json()}
+function rebuild(){latest={};[...allRecords].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).forEach(r=>{if(!latest[r.machine])latest[r.machine]=r})}
+function recs(id,n=60){return allRecords.filter(r=>r.machine===id).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at)).slice(-n)}
+function cards(target){const e=document.getElementById(target);e.innerHTML=MACHINES.map(m=>{const r=latest[m.id],s=state(r);return `<article class="machine ${s}" data-id="${m.id}"><div class="mhead"><h3>${m.name}</h3><span class="pill">${r?label(s):"Sem dados"}</span></div><div class="visual"><b>${m.icon}</b><span>${m.type}</span></div><div class="mainrow"><div><span>Horímetro</span><strong>${r?fmt(r.horimetro,2)+" h":"--"}</strong></div><div style="text-align:right"><span>Atualização</span><strong style="font-size:.78rem">${r?new Date(r.created_at).toLocaleTimeString("pt-BR"):"--"}</strong></div></div><div class="metrics"><div><span>RMS</span><strong>${r?fmt(r.rms,3)+" g":"--"}</strong></div><div><span>Pico</span><strong>${r?fmt(r.pico,3)+" g":"--"}</strong></div><div><span>Temp.</span><strong>${r&&r.temperatura!=null?fmt(r.temperatura,1)+" °C":"--"}</strong></div></div></article>`}).join("");e.querySelectorAll(".machine").forEach(x=>x.onclick=()=>openMachine(x.dataset.id))}
+function kpis(){const st=MACHINES.map(m=>state(latest[m.id])),run=st.filter(s=>s!=="stopped").length,stop=st.filter(s=>s==="stopped").length,al=st.filter(s=>s==="warning"||s==="alarm").length,total=MACHINES.length,util=Math.round(run/total*100),hours=MACHINES.reduce((a,m)=>a+(+latest[m.id]?.horimetro||0),0);kTotal.textContent=total;kRun.textContent=run;kStop.textContent=stop;kAlert.textContent=al;kUtil.textContent=util+"%";kHours.textContent=fmt(hours,0)+" h";kRunP.textContent=fmt(run/total*100,1)+"% da oficina";kStopP.textContent=fmt(stop/total*100,1)+"% da oficina";lRun.textContent=run;lStop.textContent=stop;lAlert.textContent=al;donutPct.textContent=util+"%";const gp=run/total*100,op=(run+stop)/total*100;donut.style.background=`conic-gradient(var(--green) 0 ${gp}%,var(--orange) ${gp}% ${op}%,var(--red) ${op}% 100%)`}
+function alerts(){const items=MACHINES.map(m=>{const r=latest[m.id],s=state(r);if(!r||!(s==="warning"||s==="alarm"))return null;let reason="Condição fora do limite";if(+r.rms>=LIMITS.rmsAlarm)reason="Vibração acima do limite de alarme";else if(+r.rms>=LIMITS.rmsWarn)reason="Vibração em atenção";else if(+r.temperatura>=LIMITS.tempAlarm)reason="Temperatura acima do limite";else if(+r.temperatura>=LIMITS.tempWarn)reason="Temperatura em atenção";return{m,r,s,reason}}).filter(Boolean);recentAlerts.innerHTML=items.slice(0,5).map(x=>`<div class="alert"><div>⚠</div><div><strong>${x.m.name}</strong><span>${x.reason}</span></div><time>${new Date(x.r.created_at).toLocaleTimeString("pt-BR")}</time></div>`).join("")||`<div class="alert"><div>✓</div><div><strong>Sem alertas ativos</strong><span>Condições dentro dos limites</span></div><time>agora</time></div>`;alertsTable.innerHTML=tableHtml(items.map(x=>[x.m.name,label(x.s),x.reason,fmt(x.r.rms,3)+" g",fmt(x.r.temperatura,1)+" °C",new Date(x.r.created_at).toLocaleString("pt-BR")]),["Máquina","Status","Motivo","RMS","Temperatura","Data/Hora"])}
+function tableHtml(rows,heads){return `<table><thead><tr>${heads.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")||`<tr><td colspan="${heads.length}">Sem registros.</td></tr>`}</tbody></table>`}
+function history(){const rows=[...allRecords].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,80).map(r=>[new Date(r.created_at).toLocaleString("pt-BR"),meta(r.machine).name,label(state(r)),fmt(r.horimetro,2)+" h",fmt(r.rms,3)+" g",fmt(r.pico,3)+" g",fmt(r.crest,2),r.temperatura!=null?fmt(r.temperatura,1)+" °C":"--"]);historyTable.innerHTML=tableHtml(rows,["Data/Hora","Máquina","Estado","Horímetro","RMS","Pico","Crest","Temperatura"])}
+function spark(id,vals){const c=document.getElementById(id),x=c.getContext("2d"),r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=Math.max(300,r.width*d);c.height=66*d;x.clearRect(0,0,c.width,c.height);if(vals.length<2)return;const mn=Math.min(...vals),mx=Math.max(...vals),rg=mx-mn||1;x.strokeStyle="#00a8ff";x.lineWidth=2*d;x.beginPath();vals.forEach((v,i)=>{const px=5*d+i/(vals.length-1)*(c.width-10*d),py=c.height-7*d-(v-mn)/rg*(c.height-14*d);i?x.lineTo(px,py):x.moveTo(px,py)});x.stroke()}
+function minis(){const L=MACHINES.map(m=>latest[m.id]).filter(Boolean),avg=f=>{const a=L.map(r=>+r[f]).filter(Number.isFinite);return a.reduce((s,v)=>s+v,0)/(a.length||1)};avgRms.textContent=fmt(avg("rms"),3)+" g";avgTemp.textContent=fmt(avg("temperatura"),1)+" °C";avgPeak.textContent=fmt(avg("pico"),3)+" g";avgCrest.textContent=fmt(avg("crest"),2);spark("sRms",L.map(r=>+r.rms));spark("sTemp",L.map(r=>+r.temperatura));spark("sPeak",L.map(r=>+r.pico));spark("sCrest",L.map(r=>+r.crest))}
+function line(id,rs,field,dig){const c=document.getElementById(id),x=c.getContext("2d"),r=c.getBoundingClientRect(),D=devicePixelRatio||1;c.width=Math.max(500,r.width*D);c.height=250*D;x.clearRect(0,0,c.width,c.height);const v=rs.map(z=>+z[field]).filter(Number.isFinite);if(!v.length)return;const pl=58*D,pr=15*D,pt=15*D,pb=30*D,pw=c.width-pl-pr,ph=c.height-pt-pb;let mn=Math.min(...v),mx=Math.max(...v),rg=mx-mn||Math.max(Math.abs(mx)*.1,1);mn-=rg*.15;mx+=rg*.15;x.strokeStyle="#1d2c39";x.fillStyle="#8395a8";x.font=`${10*D}px Segoe UI`;for(let i=0;i<5;i++){const py=pt+ph*i/4;x.beginPath();x.moveTo(pl,py);x.lineTo(c.width-pr,py);x.stroke();x.fillText((mx-(mx-mn)*i/4).toFixed(dig),3*D,py+3*D)}x.strokeStyle="#00a8ff";x.lineWidth=2.3*D;x.beginPath();v.forEach((z,i)=>{const px=pl+i/(v.length-1||1)*pw,py=pt+(1-(z-mn)/(mx-mn))*ph;i?x.lineTo(px,py):x.moveTo(px,py)});x.stroke()}
+function openMachine(id){selected=id;const m=meta(id),r=latest[id],rs=recs(id);mTitle.textContent=m.name;dStatus.textContent=r?label(state(r)):"Sem dados";dHours.textContent=r?fmt(r.horimetro,2)+" h":"--";dRms.textContent=r?fmt(r.rms,3)+" g":"--";dPeak.textContent=r?fmt(r.pico,3)+" g":"--";dCrest.textContent=r?fmt(r.crest,2):"--";dTemp.textContent=r&&r.temperatura!=null?fmt(r.temperatura,1)+" °C":"--";line("rmsChart",rs,"rms",3);line("tempChart",rs,"temperatura",1);machineHistory.innerHTML=tableHtml([...rs].reverse().slice(0,20).map(z=>[new Date(z.created_at).toLocaleString("pt-BR"),z.running?"Ligada":"Parada",fmt(z.horimetro,2)+" h",fmt(z.rms,3)+" g",fmt(z.pico,3)+" g",fmt(z.crest,2),fmt(z.temperatura,1)+" °C"]),["Data/Hora","Estado","Horímetro","RMS","Pico","Crest","Temp."]);modal.classList.remove("hidden")}
+function render(){rebuild();kpis();cards("machineGrid");cards("machineGridLarge");alerts();history();minis()}
+async function load(){try{if(DEMO_MODE){allRecords=demo();cloud.textContent="MODO DEMONSTRAÇÃO";cloud.className="badge"}else{allRecords=await fetchCloud();cloud.textContent="NUVEM CONECTADA";cloud.className="badge online"}render()}catch(e){console.error(e);cloud.textContent="ERRO NA NUVEM";cloud.className="badge error"}}
+document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));document.getElementById(b.dataset.view).classList.add("active")});close.onclick=()=>modal.classList.add("hidden");modal.onclick=e=>{if(e.target===modal)modal.classList.add("hidden")};full.onclick=async()=>{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen()};function tick(){const d=new Date();clock.textContent=d.toLocaleTimeString("pt-BR");date.textContent=d.toLocaleDateString("pt-BR")}tick();setInterval(tick,1000);window.onresize=()=>{minis();if(selected&&!modal.classList.contains("hidden"))openMachine(selected)};load();if(!DEMO_MODE)setInterval(load,10000);
