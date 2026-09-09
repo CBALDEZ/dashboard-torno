@@ -173,7 +173,80 @@ function cards(target){
   };
 }
 function kpis(){const st=MACHINES.map(m=>state(latest[m.id])),run=st.filter(s=>s!=="stopped").length,stop=st.filter(s=>s==="stopped").length,al=st.filter(s=>s==="warning"||s==="alarm").length,total=MACHINES.length,util=Math.round(run/total*100),hours=MACHINES.reduce((a,m)=>a+(+latest[m.id]?.horimetro||0),0);kTotal.textContent=total;kRun.textContent=run;kStop.textContent=stop;kAlert.textContent=al;kUtil.textContent=util+"%";kHours.textContent=fmt(hours,0)+" h";kRunP.textContent=fmt(run/total*100,1)+"% da oficina";kStopP.textContent=fmt(stop/total*100,1)+"% da oficina";lRun.textContent=run;lStop.textContent=stop;lAlert.textContent=al;donutPct.textContent=util+"%";const gp=run/total*100,op=(run+stop)/total*100;donut.style.background=`conic-gradient(var(--green) 0 ${gp}%,var(--orange) ${gp}% ${op}%,var(--red) ${op}% 100%)`}
-function alerts(){const items=MACHINES.map(m=>{const r=latest[m.id],s=state(r);if(!r||!(s==="warning"||s==="alarm"))return null;let reason="Condição fora do limite";if(+r.rms>=LIMITS.rmsAlarm)reason="Vibração acima do limite de alarme";else if(+r.rms>=LIMITS.rmsWarn)reason="Vibração em atenção";else if(+r.temperatura>=LIMITS.tempAlarm)reason="Temperatura acima do limite";else if(+r.temperatura>=LIMITS.tempWarn)reason="Temperatura em atenção";return{m,r,s,reason}}).filter(Boolean);recentAlerts.innerHTML=items.slice(0,5).map(x=>`<div class="alert"><div>⚠</div><div><strong>${x.m.name}</strong><span>${x.reason}</span></div><time>${new Date(x.r.created_at).toLocaleTimeString("pt-BR")}</time></div>`).join("")||`<div class="alert"><div>✓</div><div><strong>Sem alertas ativos</strong><span>Condições dentro dos limites</span></div><time>agora</time></div>`;alertsTable.innerHTML=tableHtml(items.map(x=>[x.m.name,label(x.s),x.reason,fmt(x.r.rms,3)+" g",fmt(x.r.temperatura,1)+" °C",new Date(x.r.created_at).toLocaleString("pt-BR")]),["Máquina","Status","Motivo","RMS","Temperatura","Data/Hora"])}
+function alerts(){
+
+  const items = allRecords
+    .filter(r => {
+      const s = state(r);
+      return s === "warning" || s === "alarm";
+    })
+    .sort((a,b) =>
+      new Date(b.created_at) - new Date(a.created_at)
+    );
+
+  const enriched = items.map(r => {
+
+    const m = meta(r.machine);
+    const s = state(r);
+
+    let reason = "Condição fora do limite";
+
+    if (+r.rms >= LIMITS.rmsAlarm)
+      reason = "Vibração acima do limite de alarme";
+    else if (+r.rms >= LIMITS.rmsWarn)
+      reason = "Vibração em atenção";
+    else if (+r.temperatura >= LIMITS.tempAlarm)
+      reason = "Temperatura acima do limite";
+    else if (+r.temperatura >= LIMITS.tempWarn)
+      reason = "Temperatura em atenção";
+
+    return {m,r,s,reason};
+  });
+
+  recentAlerts.innerHTML =
+    enriched.slice(0,5).map(x => `
+      <div class="alert">
+        <div>⚠</div>
+        <div>
+          <strong>${x.m.name}</strong>
+          <span>${x.reason}</span>
+        </div>
+        <time>${new Date(x.r.created_at).toLocaleTimeString("pt-BR")}</time>
+      </div>
+    `).join("")
+    ||
+    `
+      <div class="alert">
+        <div>✓</div>
+        <div>
+          <strong>Sem alertas registrados</strong>
+          <span>Condições dentro dos limites</span>
+        </div>
+        <time>agora</time>
+      </div>
+    `;
+
+  alertsTable.innerHTML = tableHtml(
+    enriched.slice(0,100).map(x => [
+      x.m.name,
+      label(x.s),
+      x.reason,
+      fmt(x.r.rms,3) + " g",
+      x.r.temperatura != null
+        ? fmt(x.r.temperatura,1) + " °C"
+        : "--",
+      new Date(x.r.created_at).toLocaleString("pt-BR")
+    ]),
+    [
+      "Máquina",
+      "Status",
+      "Motivo",
+      "RMS",
+      "Temperatura",
+      "Data/Hora"
+    ]
+  );
+}
 function tableHtml(rows,heads){return `<table><thead><tr>${heads.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")||`<tr><td colspan="${heads.length}">Sem registros.</td></tr>`}</tbody></table>`}
 function history(){const rows=[...allRecords].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,80).map(r=>[new Date(r.created_at).toLocaleString("pt-BR"),meta(r.machine).name,label(state(r)),fmt(r.horimetro,2)+" h",fmt(r.rms,3)+" g",fmt(r.pico,3)+" g",fmt(r.crest,2),r.temperatura!=null?fmt(r.temperatura,1)+" °C":"--"]);historyTable.innerHTML=tableHtml(rows,["Data/Hora","Máquina","Estado","Horímetro","RMS","Pico","Crest","Temperatura"])}
 function spark(id,vals){const c=document.getElementById(id),x=c.getContext("2d"),r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=Math.max(300,r.width*d);c.height=66*d;x.clearRect(0,0,c.width,c.height);if(vals.length<2)return;const mn=Math.min(...vals),mx=Math.max(...vals),rg=mx-mn||1;x.strokeStyle="#00a8ff";x.lineWidth=2*d;x.beginPath();vals.forEach((v,i)=>{const px=5*d+i/(vals.length-1)*(c.width-10*d),py=c.height-7*d-(v-mn)/rg*(c.height-14*d);i?x.lineTo(px,py):x.moveTo(px,py)});x.stroke()}
