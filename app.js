@@ -1,6 +1,6 @@
-const DEMO_MODE=true;
-const SUPABASE_URL="COLE_AQUI_SUA_PROJECT_URL";
-const SUPABASE_PUBLISHABLE_KEY="COLE_AQUI_SUA_PUBLISHABLE_KEY";
+const DEMO_MODE=false;
+const SUPABASE_URL="https://vcnjemexbhxagtpjlzmp.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_up662sIeTAobe0N5u4UcaA_1ES_2wUi";
 const LIMITS={rmsWarn:.25,rmsAlarm:.40,tempWarn:60,tempAlarm:70};
 const MACHINES=[
 {id:"TORNO_01",name:"Torno 01",type:"Torno mecânico",icon:"⚙️"},{id:"TORNO_02",name:"Torno 02",type:"Torno mecânico",icon:"⚙️"},{id:"TORNO_03",name:"Torno 03",type:"Torno mecânico",icon:"⚙️"},{id:"TORNO_04",name:"Torno 04",type:"Torno mecânico",icon:"⚙️"},{id:"FRESADORA_01",name:"Fresadora 01",type:"Fresadora",icon:"🛠️"},{id:"FRESADORA_02",name:"Fresadora 02",type:"Fresadora",icon:"🛠️"},{id:"FURADEIRA_01",name:"Furadeira 01",type:"Furadeira de coluna",icon:"🔩"},{id:"FURADEIRA_02",name:"Furadeira 02",type:"Furadeira de coluna",icon:"🔩"},{id:"RETIFICA_CIL",name:"Retífica cilíndrica",type:"Retífica",icon:"🧰"},{id:"TORNO_CNC",name:"Torno CNC",type:"CNC",icon:"🖥️"},{id:"CENTRO_CNC",name:"Centro de usinagem CNC",type:"Centro de usinagem",icon:"🏭"}];
